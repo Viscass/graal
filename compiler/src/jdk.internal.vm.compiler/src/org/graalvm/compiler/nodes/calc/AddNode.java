@@ -67,7 +67,7 @@ public class AddNode extends BinaryArithmeticNode<Add> implements NarrowableArit
             return tryConstantFold;
         }
         if (x.isConstant() && !y.isConstant()) {
-            // @formatter:off veriopt: AddShiftConstantRight: ((ConstantExpr x) + y) |-> y + (ConstantExpr x) when ~(is_ConstantExpr y)
+            // veriopt-ref: AddShiftConstantRight: ((ConstantExpr x) + y) |-> y + (ConstantExpr x) when ~(is_ConstantExpr y)
             return canonical(null, op, y, x, view, false);
         } else {
             return canonical(null, op, x, y, view, false);
@@ -157,7 +157,7 @@ public class AddNode extends BinaryArithmeticNode<Add> implements NarrowableArit
                 }
             }
 
-            // veriopt: TODO: ???
+            // veriopt: TODO ???
             // Attempt to optimize the pattern of an extend node between two add nodes.
             if (c instanceof JavaConstant && (forX instanceof SignExtendNode || forX instanceof ZeroExtendNode)) {
                 IntegerConvertNode<?> integerConvertNode = (IntegerConvertNode<?>) forX;
@@ -208,7 +208,7 @@ public class AddNode extends BinaryArithmeticNode<Add> implements NarrowableArit
                                     }
                                     if (!crossesZeroPoint) {
 
-                                        // veriopt: addDoesntCrossZero =
+                                        //  addDoesntCrossZero =
                                         // (c > 0)  && ((a+b).Stamp.lower >= 0  || (a+b).Stamp.upper < -c) ||
                                         // (c <= 0) && ((a+b).Stamp.lower >= -c || (a+b).Stamp.upper < 0)
 
@@ -239,10 +239,18 @@ public class AddNode extends BinaryArithmeticNode<Add> implements NarrowableArit
         }
         if (forX instanceof NotNode notY && notY.getValue() == forY) {
             // ~y + y => -1
+
+            // veriopt: AddNotToSelf: (~y) + y |-> (const IntVal b (neg_one b)) when
+            // wf_stamp y
+            // stamp_expr y = IntegerStamp b lo hi
             return ConstantNode.forIntegerStamp(forX.stamp(view), -1);
         }
         if (forY instanceof NotNode notX && forX == notX.getValue()) {
             // x + ~x => -1
+
+            // veriopt: AddNotToSelf: x + (~x) |-> (const IntVal b (neg_one b)) when
+            // wf_stamp x
+            // stamp_expr x = IntegerStamp b lo hi
             return ConstantNode.forIntegerStamp(forX.stamp(view), -1);
         }
         if (self == null) {
@@ -265,7 +273,7 @@ public class AddNode extends BinaryArithmeticNode<Add> implements NarrowableArit
                 return improvement;
             }
             // if this fails we only swap
-            // @formatter:off veriopt: AddShiftConstantRight: ((ConstantExpr x) + y) |-> y + (ConstantExpr x) when ~ (is_ConstantExpr y)
+            // veriopt: AddShiftConstantRight: ((ConstantExpr x) + y) |-> y + (ConstantExpr x) when ~ (is_ConstantExpr y)
             return new AddNode(forY, forX);
         }
         BinaryOp<Add> op = getOp(forX, forY);
