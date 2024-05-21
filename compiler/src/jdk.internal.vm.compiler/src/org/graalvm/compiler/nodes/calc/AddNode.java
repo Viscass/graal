@@ -183,12 +183,12 @@ public class AddNode extends BinaryArithmeticNode<Add> implements NarrowableArit
 
                                     // veriopt: MergeSignExtendAdd: x + c |-> SignExtend((a + b) + c, x.ResultBits) when
                                     //                               is_Constant c              &
-                                    //                               is_SignExtendNode x        &     todo not sure how to encode
-                                    //                               x.ValueNode = AddNode(a,b) &     todo not sure how to encode
+                                    //                               is_SignExtendNode x        &     
+                                    //                               x.ValueNode = AddNode(a,b) &    
                                     //                               is_Constant b              &
                                     //                               c >= (a+b).Stamp.bits.minValue &
-                                    //                               c <= (a+b).Stamp.bits.maxValue & todo c is in valid range of (a+b) ?
-                                    //                               (a + b) + c won't overflow       todo not sure how to encode
+                                    //                               c <= (a+b).Stamp.bits.maxValue & 
+                                    //                               ~addCanOverflow((a+b).Stamp, stamp((a+b).Stamp.bits,c,c))    
                                     return SignExtendNode.create(AddNode.create(addBeforeExtend, constantNode, view), integerConvertNode.getResultBits(), view);
                                 } else {
                                     assert forX instanceof ZeroExtendNode;
@@ -208,19 +208,19 @@ public class AddNode extends BinaryArithmeticNode<Add> implements NarrowableArit
                                     }
                                     if (!crossesZeroPoint) {
 
-                                        //  addDoesntCrossZero =
+                                        // veriopt-def: addDoesntCrossZero =
                                         // (c > 0)  && ((a+b).Stamp.lower >= 0  || (a+b).Stamp.upper < -c) ||
                                         // (c <= 0) && ((a+b).Stamp.lower >= -c || (a+b).Stamp.upper < 0)
 
                                         // veriopt: MergeZeroExtendAdd: x + c |-> ZeroExtend((a + b) + c, x.ResultBits) when
                                         //                            is_Constant c &
-                                        //                            is_ZeroExtendNode x &             todo not sure how to encode
-                                        //                            x.ValueNode = AddNode(a,b) &      todo not sure how to encode
+                                        //                            is_ZeroExtendNode x &             
+                                        //                            x.ValueNode = AddNode(a,b) &      
                                         //                            is_Constant b &
                                         //                            c >= (a+b).Stamp.bits.minValue &
-                                        //                            c <= (a+b).Stamp.bits.maxValue &  todo c is in valid range of (a+b) ?
-                                        //                            (a + b) + c won't overflow &      todo not sure how to encode
-                                        //                            addDoesntCrossZero
+                                        //                            c <= (a+b).Stamp.bits.maxValue &  
+                                        //                            (a + b) + c won't overflow &      
+                                        //                               ~addCanOverflow((a+b).Stamp, stamp((a+b).Stamp.bits,c,c))    
                                         return ZeroExtendNode.create(AddNode.create(addBeforeExtend, constantNode, view), integerConvertNode.getResultBits(), view);
                                     }
                                 }
@@ -248,7 +248,7 @@ public class AddNode extends BinaryArithmeticNode<Add> implements NarrowableArit
         if (forY instanceof NotNode notX && forX == notX.getValue()) {
             // x + ~x => -1
 
-            // veriopt: AddNotToSelf: x + (~x) |-> (const IntVal b (neg_one b)) when
+            // veriopt: AddSelfToNot: x + (~x) |-> (const IntVal b (neg_one b)) when
             // wf_stamp x
             // stamp_expr x = IntegerStamp b lo hi
             return ConstantNode.forIntegerStamp(forX.stamp(view), -1);

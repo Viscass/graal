@@ -65,6 +65,7 @@ public final class IntegerTestNode extends BinaryOpLogicNode implements BinaryCo
     private static LogicNode canonical(ValueNode forX, ValueNode forY, NodeView view) {
         if (forX.isConstant() && forY.isConstant()) {
             if (forX.isJavaConstant() && forY.isJavaConstant()) {
+                // veriopt: IntegerTestNodeConstFold: IntegerTest((ConstantExpr x), (ConstantExpr y)) |-> ConstantExpr (x & y == 0)
                 return LogicConstantNode.forBoolean((forX.asJavaConstant().asLong() & forY.asJavaConstant().asLong()) == 0);
             }
         }
@@ -74,16 +75,19 @@ public final class IntegerTestNode extends BinaryOpLogicNode implements BinaryCo
             if ((xStamp.mayBeSet() & yStamp.mayBeSet()) == 0) {
                 return LogicConstantNode.tautology();
             } else if ((xStamp.mustBeSet() & yStamp.mustBeSet()) != 0) {
+                // veriopt: IntegerTestNodeEliminate: IntegerTest(x, y) |-> false when x.stamp.mayBeSet & y.stamp.mayBeSet != 0
                 return LogicConstantNode.contradiction();
             }
             // this node is effectively an & operation x & y == 0 so part of the canonicalizations
             // for AndNode apply
             ValueNode newLHS = AndNode.eliminateRedundantBinaryArithmeticOp(forX, yStamp);
             if (newLHS != null) {
+                // veriopt: IntegerTestNodeEliminateLHS: todo not sure
                 return new IntegerTestNode(newLHS, forY);
             }
             ValueNode newRHS = AndNode.eliminateRedundantBinaryArithmeticOp(forY, xStamp);
             if (newRHS != null) {
+                // veriopt: IntegerTestNodeEliminateRHS: todo not sure
                 return new IntegerTestNode(forX, newRHS);
             }
         }

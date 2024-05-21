@@ -178,11 +178,20 @@ public final class AndNode extends BinaryArithmeticNode<And> implements Narrowab
                 return forX;
             }
             ValueNode newLHS = eliminateRedundantBinaryArithmeticOp(forX, yStamp);
+
             if (newLHS != null) {
+                // veriopt: AndLHSEliminateRedundantOrRight: (x|y) & z |-> x & z when (canBeOne y.stamp & canBeOne z.stamp) = 0
+                // veriopt: AndLHSEliminateRedundantOrLeft: (x|y) & z |-> y & z when (canBeOne x.stamp & canBeOne z.stamp) = 0
+                // veriopt: AndLHSEliminateRedundantAddRight: (x + y) & z |-> x & z when (canBeOne(y.stamp) & canBeOne(z.stamp)) == 0 & (Long.numberOfLeadingZeros(canBeOne z.stamp) + Long.bitCount(canBeOne z.stamp) == 64)
+                // veriopt: AndLHSEliminateRedundantAddLeft: (x + y) & z |-> y & z when (canBeOne(x.stamp) & canBeOne(z.stamp)) == 0 & (Long.numberOfLeadingZeros(canBeOne z.stamp) + Long.bitCount(canBeOne z.stamp) == 64)
                 return new AndNode(newLHS, forY);
             }
             ValueNode newRHS = eliminateRedundantBinaryArithmeticOp(forY, xStamp);
             if (newRHS != null) {
+                // veriopt: AndRHSEliminateRedundantOrRight: x & (y|z) |-> x & y when (canBeOne z.stamp & canBeOne x.stamp) = 0
+                // veriopt: AndRHSEliminateRedundantOrLeft: x & (y|z) |-> x & z when (canBeOne y.stamp & canBeOne x.stamp) = 0
+                // veriopt: AndRHSEliminateRedundantAddRight: x & (y + z) |-> x & y when (canBeOne(z.stamp) & canBeOne(y.stamp)) == 0 & (Long.numberOfLeadingZeros(canBeOne y.stamp) + Long.bitCount(canBeOne y.stamp) == 64)
+                // veriopt: AndRHSEliminateRedundantAddLeft: x & (y + z) |-> x & z when (canBeOne(x.stamp) & canBeOne(y.stamp)) == 0 & (Long.numberOfLeadingZeros(canBeOne y.stamp) + Long.bitCount(canBeOne y.stamp) == 64)
                 return new AndNode(forX, newRHS);
             }
         }
@@ -217,6 +226,7 @@ public final class AndNode extends BinaryArithmeticNode<And> implements Narrowab
         }
         if (forY instanceof NotNode && ((NotNode) forY).getValue() == forX) {
             // x & ~x |-> 0
+            // veriopt: AndComplementElimination: x & ~x |-> 0
             return ConstantNode.forIntegerStamp(rawXStamp, 0L);
         }
         return self != null ? self : new AndNode(forX, forY).maybeCommuteInputs();

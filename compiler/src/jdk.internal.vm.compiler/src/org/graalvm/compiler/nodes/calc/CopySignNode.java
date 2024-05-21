@@ -114,6 +114,8 @@ public final class CopySignNode extends BinaryNode implements ArithmeticLIRLower
                                             NodeView.DEFAULT),
                             ConstantNode.forInt(Float.floatToIntBits(yValue) & 0x80000000),
                             NodeView.DEFAULT);
+            // veriopt-comment: Extract sign by interpreting x as long and using bitwise masks to
+            //                  add sign information from y, then reinterpret back to float
             return ReinterpretNode.create(JavaKind.Float, result, NodeView.DEFAULT);
         }
     }
@@ -128,6 +130,9 @@ public final class CopySignNode extends BinaryNode implements ArithmeticLIRLower
                                             NodeView.DEFAULT),
                             ConstantNode.forLong(Double.doubleToLongBits(yValue) & 0x80000000_00000000L),
                             NodeView.DEFAULT);
+            // veriopt-comment: Extract sign by interpreting x as long and using bitwise masks to
+            //                  add sign information from y, then reinterpret back to float
+            // veriopt: CopySignExtractSignFloat: CopySign x (const y) |-> Reinterpret Float (((Reinterpret Long x) & (const 0x7FFFFFFF_FFFFFFFFL)) | (const (Fouble.doubleToLongBits(y) & 0x80000000_00000000L)))
             return ReinterpretNode.create(JavaKind.Double, result, NodeView.DEFAULT);
         }
     }
@@ -138,28 +143,40 @@ public final class CopySignNode extends BinaryNode implements ArithmeticLIRLower
         switch (forX.getStackKind()) {
             case Float:
                 if (forY.isJavaConstant()) {
+                    // veriopt: CopySignFoldConstantFloat: CopySign (const x) (const y) |-> const (Math.copySign x y) when x isFloat
+                    // veriopt: CopySignConstantExtractSignFloat: CopySign x (const y) |-> Reinterpret Float (((Reinterpret Int x) & (const 0x7FFFFFFF)) | (const (Float.floatToIntBits(y) & 0x80000000))) when x isFloat & not x isConstant
                     return canonicalHelper(forX, forY.asJavaConstant().asFloat());
                 }
                 if (floatStampY.isNonNaN()) {
                     if (floatStampY.lowerBound() > 0) {
                         // always positive
+                        // veriopt: CopySignPositiveSignPropagationFloat: CopySign (const x) (y) |-> const (Math.copySign x 1.0F) when x isFloat & y.stamp.lower > 0
+                        // veriopt: CopySignPositiveExtractSignFloat: CopySign x (const y) |-> Reinterpret Float (((Reinterpret Int x) & (const 0x7FFFFFFF)) | (const (Float.floatToIntBits(1.0F) & 0x80000000))) when x isFloat & y.stamp.lower > 0 & not x isConstant
                         return canonicalHelper(forX, 1.0F);
                     } else if (floatStampY.upperBound() < 0) {
                         // always negative
+                        // veriopt: CopySignNegativeSignPropagationFloat: CopySign (const x) (y) |-> const (Math.copySign x -1.0F) when x isFloat & y.stamp.upper < 0
+                        // veriopt: CopySignNegativeExtractSignFloat: CopySign x (const y) |-> Reinterpret Float (((Reinterpret Int x) & (const 0x7FFFFFFF)) | (const (Float.floatToIntBits(-1.0F) & 0x80000000))) when x isFloat & y.stamp.upper < 0 & not x isConstant
                         return canonicalHelper(forX, -1.0F);
                     }
                 }
                 break;
             case Double:
                 if (forY.isJavaConstant()) {
+                    // veriopt: CopySignFoldConstantDouble: CopySign (const x) (const y) |-> const (Math.copySign x y) when x isDouble
+                    // veriopt: CopySignConstantExtractSignDouble: CopySign x (const y) |-> Reinterpret Double (((Reinterpret Long x) & (const 0x7FFFFFFFFFFFFFFF)) | (const (Double.doubleToLongBits(y) & 0x8000000000000000))) when x isDouble & not x isConstant
                     return canonicalHelper(forX, forY.asJavaConstant().asDouble());
                 }
                 if (floatStampY.isNonNaN()) {
                     if (floatStampY.lowerBound() > 0) {
                         // always positive
+                        // veriopt: CopySignPositiveSignPropagationDouble: CopySign (const x) (const y) |-> const (Math.copySign x 1.0D) when x isDouble & y.stamp.lower > 0
+                        // veriopt: CopySignPositiveExtractSignDouble: CopySign x (const y) |-> Reinterpret Double (((Reinterpret Long x) & (const 0x7FFFFFFFFFFFFFFF)) | (const (Double.doubleToLongBits(1.0D) & 0x8000000000000000))) when x isDouble & not x isConstant & y.stamp.lower > 0
                         return canonicalHelper(forX, 1.0D);
                     } else if (floatStampY.upperBound() < 0) {
                         // always negative
+                        // veriopt: CopySignNegativeSignPropagationDouble: CopySign (const x) (const y) |-> const (Math.copySign x -1.0D) when x isDouble & y.stamp.upper < 0
+                        // veriopt: CopySignNegativeExtractSignDouble: CopySign x (const y) |-> Reinterpret Double (((Reinterpret Long x) & (const 0x7FFFFFFFFFFFFFFF)) | (const (Double.doubleToLongBits(-1.0D) & 0x8000000000000000))) when x isDouble & not x isConstant & y.stamp.upper < 0
                         return canonicalHelper(forX, -1.0D);
                     }
                 }

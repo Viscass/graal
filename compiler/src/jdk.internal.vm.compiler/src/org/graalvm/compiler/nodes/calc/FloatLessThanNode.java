@@ -94,6 +94,7 @@ public final class FloatLessThanNode extends CompareNode {
                 return result;
             }
             if (GraphUtil.unproxify(forX) == GraphUtil.unproxify(forY) && !unorderedIsTrue) {
+                // veriopt: FloatLessThanSame: FloatLessThan x x |-> false
                 return LogicConstantNode.contradiction();
             }
             return null;

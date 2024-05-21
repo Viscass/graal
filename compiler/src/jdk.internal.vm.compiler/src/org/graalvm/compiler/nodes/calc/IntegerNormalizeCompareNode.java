@@ -64,6 +64,7 @@ public final class IntegerNormalizeCompareNode extends AbstractNormalizeCompareN
         NodeView view = NodeView.from(tool);
         ValueNode result = tryConstantFold(x, y, false, unsigned, stamp(view).getStackKind(), tool.getConstantReflection());
         if (result != null) {
+            // veriopt: IntegerNormalizeCompareConstFold: todo unsure
             return result;
         }
         return this;

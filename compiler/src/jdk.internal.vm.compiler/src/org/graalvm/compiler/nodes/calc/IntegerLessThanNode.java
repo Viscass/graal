@@ -164,6 +164,7 @@ public final class IntegerLessThanNode extends IntegerLowerThanNode {
             if (forX.getOptions() == null || GraalOptions.PreferUnsignedComparison.getValue(forX.getOptions())) {
                 if (forX.stamp(view) instanceof IntegerStamp && forY.stamp(view) instanceof IntegerStamp) {
                     if (IntegerStamp.sameSign((IntegerStamp) forX.stamp(view), (IntegerStamp) forY.stamp(view))) {
+                        // veriopt: todo unsure
                         return new IntegerBelowNode(forX, forY);
                     }
                 }
@@ -199,6 +200,8 @@ public final class IntegerLessThanNode extends IntegerLowerThanNode {
                             if (negate) {
                                 logic = LogicNegationNode.create(logic);
                             }
+                            // veriopt: IntegerLessThanSubLessZero: (x - y) < 0 |-> x < y when !subtractMayUnderflow(x.stamp.lower, y.stamp.upper)
+                            // veriopt: IntegerLessThanSubLessOne: (x - y) < 1 |-> !(y < x) when !subtractMayUnderflow(x.stamp.upper, y.stamp.lower)
                             return logic;
                         }
                     }
@@ -215,6 +218,7 @@ public final class IntegerLessThanNode extends IntegerLowerThanNode {
                             long xConstant = addNode.getY().asJavaConstant().asLong();
                             if (!subtractMayUnderflow(yConstant, xConstant, minValue) && !subtractMayOverflow(yConstant, xConstant, maxValue)) {
                                 long newConstant = yConstant - xConstant;
+                                // veriopt: IntegerLessThanAddLess: (x + const (xc)) < const(yc) |-> x < (const (yc - xc)) when !subtractMayUnderflow(yc, xc, minValue) && !subtractMayOverflow(yc, xc, maxValue)
                                 return IntegerLessThanNode.create(addNode.getX(), ConstantNode.forIntegerStamp(xStamp, newConstant), view);
                             }
                         }
@@ -228,6 +232,7 @@ public final class IntegerLessThanNode extends IntegerLowerThanNode {
                 assert ((IntegerStamp) forY.stamp(view)).getBits() == bits;
                 LogicNode logic = canonicalizeRangeFlip(forX, forY, bits, true, view);
                 if (logic != null) {
+                    // veriopt-ref: IntegerLessThanRangeFlip 
                     return logic;
                 }
             }

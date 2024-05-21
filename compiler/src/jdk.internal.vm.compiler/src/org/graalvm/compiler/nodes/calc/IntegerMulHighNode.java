@@ -78,6 +78,7 @@ public final class IntegerMulHighNode extends BinaryArithmeticNode<MulHigh> impl
                 return improvement;
             }
             // if this fails we only swap
+            // veriopt: IntegerMulHighShiftConstantRight: IntegerMulHighNode((ConstantExpr x), y) |-> IntegerMulHighNode(y, (ConstantExpr x)) when ~(is_ConstantExpr y)
             return new IntegerMulHighNode(forY, forX);
         }
         return canonical(this, forY);
@@ -89,6 +90,7 @@ public final class IntegerMulHighNode extends BinaryArithmeticNode<MulHigh> impl
             if (c instanceof PrimitiveConstant && ((PrimitiveConstant) c).getJavaKind().isNumericInteger()) {
                 long i = ((PrimitiveConstant) c).asLong();
                 if (i == 0) {
+                    // veriopt: IntegerMulHighZeroRight: IntegerMulHighNode(x, 0) |-> const 0
                     return ConstantNode.forIntegerStamp(self.stamp(NodeView.DEFAULT), 0);
                 }
             }

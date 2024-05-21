@@ -66,8 +66,10 @@ public final class FloatTypeTestNode extends UnaryNode implements ArithmeticLIRL
                 if (forValue.isJavaConstant()) {
                     switch (op) {
                         case IS_FINITE:
+                            // veriopt: FloatTypeTestConstantIsFiniteFloat: FloatTypeTestNode (const x) |-> Float.isFinite(x) when op is IS_FINITE
                             return ConstantNode.forBoolean(Float.isFinite(forValue.asJavaConstant().asFloat()));
                         case IS_INFINITE:
+                            // veriopt: FloatTypeTestConstantIsInfiniteFloat: FloatTypeTestNode (const x) |-> Float.isInfinite(x) when op is IS_INFINITE
                             return ConstantNode.forBoolean(Float.isInfinite(forValue.asJavaConstant().asFloat()));
                     }
                 }
@@ -76,8 +78,10 @@ public final class FloatTypeTestNode extends UnaryNode implements ArithmeticLIRL
                 if (forValue.isJavaConstant()) {
                     switch (op) {
                         case IS_FINITE:
+                            // veriopt: FloatTypeTestConstantIsFiniteDouble: FloatTypeTestNode (const x) |-> Double.isFinite(x)
                             return ConstantNode.forBoolean(Double.isFinite(forValue.asJavaConstant().asDouble()));
                         case IS_INFINITE:
+                            // veriopt: FloatTypeTestConstantIsInfiniteDouble: FloatTypeTestNode (const x) |-> Double.isInfinite(x) when op is IS_INFINITE
                             return ConstantNode.forBoolean(Double.isInfinite(forValue.asJavaConstant().asDouble()));
                     }
                 }

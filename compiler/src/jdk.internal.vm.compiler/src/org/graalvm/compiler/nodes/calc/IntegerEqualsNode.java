@@ -65,6 +65,7 @@ public final class IntegerEqualsNode extends CompareNode implements BinaryCommut
     public static LogicNode create(ValueNode x, ValueNode y, NodeView view) {
         LogicNode result = CompareNode.tryConstantFoldPrimitive(CanonicalCondition.EQ, x, y, false, view);
         if (result != null) {
+            // veriopt: IntegerEqualsConstantFold: (ConstantExpr x) == (ConstantExpr y) |-> const eval(x == y)
             return result;
         }
         if (x instanceof ConditionalNode) {
@@ -174,6 +175,10 @@ public final class IntegerEqualsNode extends CompareNode implements BinaryCommut
                 }
                 if (v1 != null) {
                     assert v2 != null;
+                    // veriopt: IntegerEqualsEliminateAddLhs: (x + y) == (x + z) |-> y == z
+                    // veriopt: IntegerEqualsEliminateAddOuter: (x + y) == (z + x) |-> y == z
+                    // veriopt: IntegerEqualsEliminateAddRhs: (y + x) == (x + z) |-> y == z
+                    // veriopt: IntegerEqualsEliminateAddInner: (y + x) == (z + x) |-> y == z
                     return create(v1, v2, view);
                 }
             }
@@ -194,6 +199,8 @@ public final class IntegerEqualsNode extends CompareNode implements BinaryCommut
                 }
                 if (v1 != null) {
                     assert v2 != null;
+                    // veriopt: IntegerEqualsEliminateSub: (x - y) == (x - z) |-> y == z
+                    // veriopt: IntegerEqualsEliminateSubMirror: (y - x) == (z - x) |-> y == z
                     return create(v1, v2, view);
                 }
             }
@@ -202,9 +209,11 @@ public final class IntegerEqualsNode extends CompareNode implements BinaryCommut
                 AddNode addNode = (AddNode) forX;
                 if (addNode.getX() == forY) {
                     // (x + y) == x => y == 0
+                    // veriopt: IntegerEqualsAddLHSNeutralY: (x + y) == x |-> y == 0
                     return create(addNode.getY(), ConstantNode.forIntegerStamp(view.stamp(addNode), 0), view);
                 } else if (addNode.getY() == forY) {
                     // (x + y) == y => x == 0
+                    // veriopt: IntegerEqualsAddLHSNeutralX: (x + y) == y |-> x == 0
                     return create(addNode.getX(), ConstantNode.forIntegerStamp(view.stamp(addNode), 0), view);
                 }
             }
@@ -213,9 +222,11 @@ public final class IntegerEqualsNode extends CompareNode implements BinaryCommut
                 AddNode addNode = (AddNode) forY;
                 if (addNode.getX() == forX) {
                     // x == (x + y) => y == 0
+                    // veriopt: IntegerEqualsAddRHSNeutralY: x == (x + y) |-> y == 0
                     return create(addNode.getY(), ConstantNode.forIntegerStamp(view.stamp(addNode), 0), view);
                 } else if (addNode.getY() == forX) {
                     // y == (x + y) => x == 0
+                    // veriopt: IntegerEqualsAddRHSNeutralX: y == (x + y) |-> x == 0
                     return create(addNode.getX(), ConstantNode.forIntegerStamp(view.stamp(addNode), 0), view);
                 }
             }
@@ -224,6 +235,7 @@ public final class IntegerEqualsNode extends CompareNode implements BinaryCommut
                 SubNode subNode = (SubNode) forX;
                 if (subNode.getX() == forY) {
                     // (x - y) == x => y == 0
+                    // veriopt: IntegerEqualsSubLHSNeutral: (x - y) == x |-> y == 0
                     return create(subNode.getY(), ConstantNode.forIntegerStamp(view.stamp(subNode), 0), view);
                 }
             }
@@ -232,16 +244,19 @@ public final class IntegerEqualsNode extends CompareNode implements BinaryCommut
                 SubNode subNode = (SubNode) forY;
                 if (forX == subNode.getX()) {
                     // x == (x - y) => y == 0
+                    // veriopt: IntegerEqualsSubRHSNeutral: x == (x - y) |-> y == 0
                     return create(subNode.getY(), ConstantNode.forIntegerStamp(view.stamp(subNode), 0), view);
                 }
             }
 
             if (forX instanceof NotNode notY && notY.getValue() == forY) {
                 // ~y == y => false
+                // veriopt: IntegerEqualsNotY: ~y == y |-> false
                 return LogicConstantNode.contradiction();
             }
             if (forY instanceof NotNode notX && forX == notX.getValue()) {
                 // x == ~x => false
+                // veriopt: IntegerEqualsNotX: x == ~x |-> false
                 return LogicConstantNode.contradiction();
             }
 

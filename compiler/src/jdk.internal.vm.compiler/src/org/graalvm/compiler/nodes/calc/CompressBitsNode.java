@@ -79,18 +79,22 @@ public final class CompressBitsNode extends BinaryArithmeticNode<Compress> {
                 int maskValue = maskAsConstant.asInt();
                 if (maskValue == 0) {
                     // compress(x, 0) == 0
+                    // veriopt: CompressZeroMask: compress(x, 0) |-> 0
                     return ConstantNode.forInt(0);
                 } else if (maskValue == -1) {
                     // compress(x, -1) == x
+                    // veriopt: CompressAllBitsMask: compress(x, -1) |-> x
                     return value;
                 }
             } else {
                 long maskValue = maskAsConstant.asLong();
                 if (maskValue == 0L) {
                     // compress(x, 0) == 0
+                    // veriopt: CompressZeroMaskLong: compress(x, 0) |-> 0
                     return ConstantNode.forLong(0L);
                 } else if (maskValue == -1L) {
                     // compress(x, -1) == x
+                    // veriopt: CompressAllBitsMaskLong: compress(x, -1) |-> x
                     return value;
                 }
             }
@@ -101,24 +105,29 @@ public final class CompressBitsNode extends BinaryArithmeticNode<Compress> {
                 int maskX = ((LeftShiftNode) mask).getX().asJavaConstant().asInt();
                 if (maskX == 1) {
                     // compress(x, 1 << n) == (x >> n & 1)
+                    // veriopt: CompressSingleBit: compress(x, 1 << n) |-> (x >> n & 1)
                     return AndNode.create(RightShiftNode.create(value, ((LeftShiftNode) mask).getY(), NodeView.DEFAULT), ConstantNode.forInt(1), NodeView.DEFAULT);
                 } else if (maskX == -1) {
                     // compress(x, -1 << n) == x >>> n
+                    // veriopt: CompressNegateShift: compress(x, -1 << n) |-> x >>> n
                     return UnsignedRightShiftNode.create(value, ((LeftShiftNode) mask).getY(), NodeView.DEFAULT);
                 }
             } else {
                 long maskX = ((LeftShiftNode) mask).getX().asJavaConstant().asLong();
                 if (maskX == 1L) {
                     // compress(x, 1 << n) == (x >> n & 1)
+                    // veriopt: CompressSingleBitLong: compress(x, 1 << n) |-> (x >> n & 1)
                     return AndNode.create(RightShiftNode.create(value, ((LeftShiftNode) mask).getY(), NodeView.DEFAULT), ConstantNode.forLong(1), NodeView.DEFAULT);
                 } else if (maskX == -1L) {
                     // compress(x, -1 << n) == x >>> n
+                    // veriopt: CompressNegateShiftLong: compress(x, -1 << n) |-> x >>> n
                     return UnsignedRightShiftNode.create(value, ((LeftShiftNode) mask).getY(), NodeView.DEFAULT);
                 }
             }
         }
         // compress(expand(x, m), m) == x & compress(m, m)
         if (value instanceof ExpandBitsNode && ((ExpandBitsNode) value).getY() == mask) {
+            // veriopt: CompressExpandSameMask: compress(expand(x, m), m) == x & compress(m, m)
             return AndNode.create(new CompressBitsNode(mask, mask), ((ExpandBitsNode) value).getX(), NodeView.DEFAULT);
         }
 

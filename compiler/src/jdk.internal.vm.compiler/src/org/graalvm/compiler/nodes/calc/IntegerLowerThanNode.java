@@ -207,13 +207,16 @@ public abstract class IntegerLowerThanNode extends CompareNode {
 
         protected LogicNode findSynonym(ValueNode forX, ValueNode forY, NodeView view) {
             if (GraphUtil.unproxify(forX) == GraphUtil.unproxify(forY)) {
+                // veriopt: IntegerLowerThanSame: x < x |-> false
                 return LogicConstantNode.contradiction();
             }
             Stamp xStampGeneric = forX.stamp(view);
             TriState fold = tryFold(xStampGeneric, forY.stamp(view));
             if (fold.isTrue()) {
+                // veriopt: IntegerLowerThanConstantFoldTrue: x < y |-> true when x.stamp < y.stamp is always true todo not sure
                 return LogicConstantNode.tautology();
             } else if (fold.isFalse()) {
+                // veriopt: IntegerLowerThanConstantFoldFalse: x < y |-> false when x.stamp < y.stamp is always false todo not sure
                 return LogicConstantNode.contradiction();
             }
             if (forY.stamp(view) instanceof IntegerStamp) {
@@ -225,6 +228,7 @@ public abstract class IntegerLowerThanNode extends CompareNode {
                     long xValue = forX.asJavaConstant().asLong();
                     if (xValue != maxValue(bits)) {
                         // c < x <=> !(c >= x) <=> !(x <= c) <=> !(x < c + 1)
+                        // veriopt: IntegerLowerThanShiftConstantRight: x < c |-> !(x < c + 1) when x != maxValue(bits)
                         return LogicNegationNode.create(create(forY, ConstantNode.forIntegerStamp(yStamp, xValue + 1), view));
                     }
                 }
@@ -233,17 +237,20 @@ public abstract class IntegerLowerThanNode extends CompareNode {
 
                     // x < MAX <=> x != MAX
                     if (yValue == maxValue(bits)) {
+                        // veriopt: IntegerLowerThanMax: x < y |-> !(x == y) when y == maxValue(bits)
                         return LogicNegationNode.create(IntegerEqualsNode.create(forX, forY, view));
                     }
 
                     // x < MIN + 1 <=> x <= MIN <=> x == MIN
                     if (yValue == minValue(bits) + 1) {
+                        // veriopt: IntegerLowerThanMinPlusOne: x < (y + 1) |-> (x == y) when y == minValue(bits)
                         return IntegerEqualsNode.create(forX, ConstantNode.forIntegerStamp(yStamp, minValue(bits)), view);
                     }
 
                     // (x < c && x >= c - 1) => x == c - 1
                     // If the constant is negative, only signed comparison is allowed.
                     if (yValue != minValue(bits) && xStamp.lowerBound() == yValue - 1 && (yValue > 0 || getCondition() == CanonicalCondition.LT)) {
+                        // veriopt: IntegerLowerThanConstantMinusOne: x < y |-> (x == y - 1) when yValue != minValue(bits) && x.stamp.lowerBound == yValue - 1 todo not sure
                         return IntegerEqualsNode.create(forX, ConstantNode.forIntegerStamp(yStamp, yValue - 1), view);
                     }
 
@@ -251,6 +258,9 @@ public abstract class IntegerLowerThanNode extends CompareNode {
                     AddNode addNode = (AddNode) forY;
                     LogicNode canonical = canonicalizeXLowerXPlusA(forX, addNode, false, true, view);
                     if (canonical != null) {
+                        // veriopt-ref: IntegerLowerThanXNeverLowerXPlusA
+                        // IntegerLowerThanXLowerXPlusALower
+                        // IntegerLowerThanXLowerXPlusAHigher
                         return canonical;
                     }
                 }
@@ -258,6 +268,9 @@ public abstract class IntegerLowerThanNode extends CompareNode {
                     AddNode addNode = (AddNode) forX;
                     LogicNode canonical = canonicalizeXLowerXPlusA(forY, addNode, true, false, view);
                     if (canonical != null) {
+                        // veriopt-ref: IntegerLowerThanXNeverLowerXPlusA
+                        // IntegerLowerThanXLowerXPlusALower
+                        // IntegerLowerThanXLowerXPlusAHigher
                         return canonical;
                     }
                 }
@@ -268,12 +281,21 @@ public abstract class IntegerLowerThanNode extends CompareNode {
                     ValueNode originalY = piY.getOriginalNode();
                     if (originalY instanceof AddNode && ((AddNode) originalY).getY().isConstant() && ((AddNode) originalY).getX() == originalX) {
                         // piX <- value, piY <- value + c
+                        // veriopt-ref: IntegerLowerThanPiXLowerPiXPlusCFalse
+                        // IntegerLowerThanPiXLowerPiXPlusCTrue
                         return canonicalizePiXLowerPiXPlusC(piX, piY, false, view);
                     } else if (originalX instanceof AddNode && ((AddNode) originalX).getY().isConstant() && ((AddNode) originalX).getX() == originalY) {
                         // piX <- value + c, piY <- value
+                        // veriopt-ref: IntegerLowerThanPiXLowerPiXPlusCFalse
+                        // IntegerLowerThanPiXLowerPiXPlusCTrue
                         return canonicalizePiXLowerPiXPlusC(piY, piX, true, view);
                     }
                 }
+                // veriopt-ref: IntegerLowerThanAddCommonLHS
+                // veriopt-ref: IntegerLowerThanAddCommonOuter
+                // veriopt-ref: IntegerLowerThanAddCommonInner
+                // veriopt-ref: IntegerLowerThanAddCommonRHS
+                // veriopt-ref: IntegerLowerThanLeftShiftCommon
                 return canonicalizeCommonArithmetic(forX, forY, view);
             }
             return null;
@@ -367,8 +389,10 @@ public abstract class IntegerLowerThanNode extends CompareNode {
             // recreate to original operation of piWithAdd but using newValue instead of value
             ValueNode newWithAdd = AddNode.create(newValue, constant, view);
             if (mirror) {
+                // veriopt: IntegerLowerThanPiXLowerPiXPlusCFalse: x < (y + c) |-> false when x.stamp < y.stamp is always false todo not sure
                 return constantOrNull(newWithAdd, newValue, view);
             } else {
+                // veriopt: IntegerLowerThanPiXLowerPiXPlusCTrue: x < (y + c) |-> true when x.stamp < y.stamp is always true todo not sure
                 return constantOrNull(newValue, newWithAdd, view);
             }
         }
@@ -416,6 +440,10 @@ public abstract class IntegerLowerThanNode extends CompareNode {
                     IntegerStamp stamp2 = (IntegerStamp) v2.stamp(view);
                     IntegerStamp stampCommon = (IntegerStamp) common.stamp(view);
                     if (!addCanOverflow(stamp1, stampCommon) && !addCanOverflow(stamp2, stampCommon)) {
+                        // veriopt: IntegerLowerThanAddCommonLHS: x + y < x + z |-> y < z when !addCanOverflow(y.stamp, x.stamp) && !addCanOverflow(y.stamp, x.stamp)
+                        // veriopt: IntegerLowerThanAddCommonOuter: x + y < z + x |-> y < z when !addCanOverflow(y.stamp, x.stamp) && !addCanOverflow(y.stamp, x.stamp)
+                        // veriopt: IntegerLowerThanAddCommonInner: y + x < x + z |-> y < z when !addCanOverflow(y.stamp, x.stamp) && !addCanOverflow(y.stamp, x.stamp)
+                        // veriopt: IntegerLowerThanAddCommonRHS: y + x < z + x |-> y < z when !addCanOverflow(y.stamp, x.stamp) && !addCanOverflow(y.stamp, x.stamp)
                         return create(v1, v2, view);
                     }
                 }
@@ -433,6 +461,7 @@ public abstract class IntegerLowerThanNode extends CompareNode {
                         IntegerStamp stamp1 = (IntegerStamp) v1.stamp(view);
                         IntegerStamp stamp2 = (IntegerStamp) v2.stamp(view);
                         if (!leftShiftCanOverflow(stamp1, constant.asLong()) && !leftShiftCanOverflow(stamp2, constant.asLong())) {
+                            // veriopt: IntegerLowerThanLeftShiftCommon: x << y < z << y |-> x < z when !leftShiftCanOverflow(x.stamp, y.asLong()) && !leftShiftCanOverflow(z.stamp, y.asLong())
                             return create(v1, v2, view);
                         }
                     }
@@ -523,8 +552,10 @@ public abstract class IntegerLowerThanNode extends CompareNode {
                     right = AddNode.create(right, ConstantNode.forIntegerBits(bits, yResidue), view);
                 }
                 if (signed) {
+                    // veriopt: IntegerLessThanRangeFlip: x + MIN_VALUE < y + MIN_VALUE |-> x |<| y todo unsure of conditions
                     return new IntegerBelowNode(left, right);
                 } else {
+                    // veriopt: IntegerBelowRangeFlip: x + MIN_VALUE |<| y + MIN_VALUE |-> x < y todo unsure of conditions
                     return new IntegerLessThanNode(left, right);
                 }
             }
@@ -549,14 +580,17 @@ public abstract class IntegerLowerThanNode extends CompareNode {
                 return null;
             }
             if (succeedingXStamp.join(forX.stamp(view)).isEmpty()) {
+                // veriopt: IntegerLowerThanXNeverLowerXPlusA x < (x + a) |-> false when x.stamp.join(forX.stamp) is empty
                 return LogicConstantNode.contradiction();
             } else if (exact && !succeedingXStamp.isEmpty()) {
                 int bits = succeedingXStamp.getBits();
                 if (compare(lowerBound(succeedingXStamp), minValue(bits)) > 0) {
                     // x must be in [L..MAX] <=> x >= L <=> !(x < L)
+                    // veriopt: IntegerLowerThanXLowerXPlusALower x < (x + a) |-> !(x < L) when a.stamp.upper = a.stamp.lower && L > minValue(bits) todo unsure
                     return LogicNegationNode.create(create(forX, ConstantNode.forIntegerStamp(succeedingXStamp, lowerBound(succeedingXStamp)), view));
                 } else if (compare(upperBound(succeedingXStamp), maxValue(bits)) < 0) {
                     // x must be in [MIN..H] <=> x <= H <=> !(H < x)
+                    // veriopt: IntegerLowerThanXLowerXPlusAHigher x < (x + a) |-> !(H < x) when a.stamp.upper = a.stamp.lower && H < maxValue(bits) todo unsure
                     return LogicNegationNode.create(create(ConstantNode.forIntegerStamp(succeedingXStamp, upperBound(succeedingXStamp)), forX, view));
                 }
             }

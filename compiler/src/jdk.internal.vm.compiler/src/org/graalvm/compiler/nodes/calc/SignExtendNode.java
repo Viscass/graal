@@ -109,12 +109,14 @@ public final class SignExtendNode extends IntegerConvertNode<SignExtend> {
             // sxxx -(sign-extend)-> ssss sxxx -(sign-extend)-> ssssssss sssssxxx
             // ==> sxxx -(sign-extend)-> ssssssss sssssxxx
             SignExtendNode other = (SignExtendNode) forValue;
+            // veriopt: SignExtendRedundantSignExtend: SignExtend b2 b3 (SignExtend b1 b2 x) |-> SignExtend b1 b3 x
             return SignExtendNode.create(other.getValue(), other.getInputBits(), resultBits, view);
         } else if (forValue instanceof ZeroExtendNode) {
             ZeroExtendNode other = (ZeroExtendNode) forValue;
             if (other.getResultBits() > other.getInputBits()) {
                 // sxxx -(zero-extend)-> 0000 sxxx -(sign-extend)-> 00000000 0000sxxx
                 // ==> sxxx -(zero-extend)-> 00000000 0000sxxx
+                // veriopt: SignExtendAfterZeroExtend: SignExtend b2 b3 (ZeroExtend b1 b2 x) |-> ZeroExtend b1 b3 x
                 return ZeroExtendNode.create(other.getValue(), other.getInputBits(), resultBits, view, other.isInputAlwaysPositive());
             }
         }
@@ -124,6 +126,8 @@ public final class SignExtendNode extends IntegerConvertNode<SignExtend> {
             if ((inputStamp.mayBeSet() & (1L << (inputBits - 1))) == 0L) {
                 // 0xxx -(sign-extend)-> 0000 0xxx
                 // ==> 0xxx -(zero-extend)-> 0000 0xxx
+
+                // veriopt: SignExtendAlwaysPositive: SignExtend b2 b3 (ZeroExtend b1 b2 x) |-> ZeroExtend b1 b3 x when (((x.stamp.mayBeSet() & (1L << (inputBits - 1))) == 0L)) todo not sure
                 return ZeroExtendNode.create(forValue, inputBits, resultBits, view, true);
             }
         }

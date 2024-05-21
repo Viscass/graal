@@ -136,6 +136,7 @@ public final class FloatConvertNode extends UnaryArithmeticNode<FloatConvertOp> 
         if (forValue instanceof FloatConvertNode) {
             FloatConvertNode other = (FloatConvertNode) forValue;
             if (other.isLossless() && other.op == this.op.reverse()) {
+                //veriopt: FloatConvertReverseConversion: FloatConvertNode (FloatConvertNode x) |-> x when other.isLossless() & other.op == this.op.reverse()
                 return other.getValue();
             }
         }

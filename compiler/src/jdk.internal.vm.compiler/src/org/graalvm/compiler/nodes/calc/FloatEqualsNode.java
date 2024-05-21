@@ -120,8 +120,10 @@ public final class FloatEqualsNode extends CompareNode implements BinaryCommutat
                 FloatStamp xStamp = (FloatStamp) xStampGeneric;
                 FloatStamp yStamp = (FloatStamp) yStampGeneric;
                 if (GraphUtil.unproxify(forX) == GraphUtil.unproxify(forY) && xStamp.isNonNaN() && yStamp.isNonNaN()) {
+                    // veriopt: FloatEqualsSame: FloatEquals(x, x) |-> true when isNonNaN x
                     return LogicConstantNode.tautology();
                 } else if (xStamp.alwaysDistinct(yStamp)) {
+                    // veriopt: FloatEqualsAlwaysDistinct: FloatEquals(x, y) |-> false when x.stamp.alwaysDistinct(y)
                     return LogicConstantNode.contradiction();
                 }
             }

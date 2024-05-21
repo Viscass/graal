@@ -141,6 +141,7 @@ public final class ZeroExtendNode extends IntegerConvertNode<ZeroExtend> {
             // xxxx -(zero-extend)-> 0000 xxxx -(zero-extend)-> 00000000 0000xxxx
             // ==> xxxx -(zero-extend)-> 00000000 0000xxxx
             ZeroExtendNode other = (ZeroExtendNode) forValue;
+            // veriopt: ZeroExtendRedundantZeroExtend: ZeroExtend b2 b3 (ZeroExtend b1 b2 x) |-> ZeroExtend b1 b3 x
             return new ZeroExtendNode(other.getValue(), other.getInputBits(), resultBits, other.isInputAlwaysPositive());
         }
         if (forValue instanceof NarrowNode) {
@@ -155,13 +156,16 @@ public final class ZeroExtendNode extends IntegerConvertNode<ZeroExtend> {
 
                     if (istamp.getBits() < resultBits) {
                         // Need to keep the zero extend, skip the narrow.
+                        // veriopt: ZeroExtendSkipNarrow: ZeroExtend b2 b3 (Narrow b1 b2 x) |-> ZeroExtend b1 b3 x when ((istamp.mayBeSet() & ~mask) == 0) and b1 < b3
                         return create(narrow.getValue(), resultBits, view);
                     } else if (istamp.getBits() > resultBits) {
                         // Need to keep the narrow, skip the zero extend.
+                        // veriopt: ZeroExtendSkipZeroExtend: ZeroExtend b2 b3 (Narrow b1 b2 x) |-> Narrow b1 b3 x when ((istamp.mayBeSet() & ~mask) == 0) and b1 > b3
                         return NarrowNode.create(narrow.getValue(), resultBits, view);
                     } else {
                         assert istamp.getBits() == resultBits;
                         // Just return the original value.
+                        // veriopt: ZeroExtendNarrowCancel: ZeroExtend b2 b3 (Narrow b1 b2 x) |-> x when ((istamp.mayBeSet() & ~mask) == 0) and b1 = b3
                         return narrow.getValue();
                     }
                 }

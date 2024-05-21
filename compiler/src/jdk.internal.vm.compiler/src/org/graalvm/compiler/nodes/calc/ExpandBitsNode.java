@@ -80,18 +80,22 @@ public final class ExpandBitsNode extends BinaryArithmeticNode<Expand> {
                 int maskValue = maskAsConstant.asInt();
                 if (maskValue == 0) {
                     // expand(x, 0) == 0
+                    // veriopt: ExpandZeroMask: expand(x, 0) |-> 0
                     return mask;
                 } else if (maskValue == -1) {
+                    // veriopt: ExpandAllBitsMask: expand(x, -1) |-> x
                     // expand(x, -1) == x
                     return value;
                 }
             } else {
                 long maskValue = maskAsConstant.asLong();
                 if (maskValue == 0L) {
+                    // veriopt: ExpandZeroMaskLong: expand(x, 0L) |-> 0L
                     // expand(x, 0) == 0
                     return mask;
                 } else if (maskValue == -1L) {
                     // expand(x, -1) == x
+                    // veriopt: ExpandAllBitsMaskLong: expand(x, -1L) |-> x
                     return value;
                 }
             }
@@ -100,10 +104,12 @@ public final class ExpandBitsNode extends BinaryArithmeticNode<Expand> {
         if (value.isConstant()) {
             if (kind == JavaKind.Int) {
                 if (value.asJavaConstant().asInt() == -1) {
+                    // veriopt: ExpandNegateValue: expand(-1, x) |-> x
                     return mask;
                 }
             } else {
                 if (value.asJavaConstant().asLong() == -1L) {
+                    // veriopt: ExpandNegateValueLong: expand(-1L, x) |-> x
                     return mask;
                 }
             }
@@ -122,7 +128,7 @@ public final class ExpandBitsNode extends BinaryArithmeticNode<Expand> {
             } else {
                 long maskX = ((LeftShiftNode) mask).getX().asJavaConstant().asLong();
                 if (maskX == 1L) {
-                    // expand(x, 1 << n) == (x & 1) << n
+                    // expand(x, 1 << n) == (x & 1L) << n
                     return LeftShiftNode.create(AndNode.create(value, ConstantNode.forLong(1), NodeView.DEFAULT), ((LeftShiftNode) mask).getY(), NodeView.DEFAULT);
                 } else if (maskX == -1L) {
                     // expand(x, -1 << n) == x << n

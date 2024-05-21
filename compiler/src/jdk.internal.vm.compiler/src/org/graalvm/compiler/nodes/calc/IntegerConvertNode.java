@@ -108,8 +108,10 @@ public abstract class IntegerConvertNode<OP> extends UnaryNode implements Arithm
 
     protected static <T> ValueNode findSynonym(IntegerConvertOp<T> operation, ValueNode value, int inputBits, int resultBits, Stamp stamp) {
         if (inputBits == resultBits) {
+            // veriopt: IntegerConvertNoConversion: IntegerConvert(x, inBits, resBits) |-> x
             return value;
         } else if (value.isConstant()) {
+            // veriopt: IntegerConvertConstantFold: IntegerConvert(x, inBits, resBits) |-> x
             return ConstantNode.forPrimitive(stamp, operation.foldConstant(inputBits, resultBits, value.asConstant()));
         }
         return null;
