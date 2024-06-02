@@ -109,6 +109,7 @@ public abstract class BinaryArithmeticNode<OP> extends BinaryNode implements Ari
                      *            (cond ? 95 : 105)
                      */
                     // @formatter:on
+                    // veriopt: BinaryArithmeticCondConstFold: BinaryArithmeticNode (ConditionalNode cond (ConstantExpr trueValue) (ConstantExpr falseValue)) (ConstantExpr y) |-> ConditionalNode cond (BinaryArithmeticNode (ConstantExpr (trueValue op y)) (BinaryArithmeticNode (ConstantExpr op y))
                     return ConditionalNode.create(conditionalNode.condition, trueConstant,
                                     falseConstant, view);
                 }

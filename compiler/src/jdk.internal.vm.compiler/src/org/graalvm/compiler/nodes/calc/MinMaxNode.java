@@ -63,6 +63,7 @@ public abstract class MinMaxNode<OP> extends BinaryArithmeticNode<OP> implements
     public ValueNode canonical(CanonicalizerTool tool, ValueNode forX, ValueNode forY) {
         ValueNode ret = super.canonical(tool, forX, forY);
         if (ret != this) {
+            // veriopt-ref: BinaryFoldConstant, BinaryArithmeticCondConstFold
             return ret;
         }
 

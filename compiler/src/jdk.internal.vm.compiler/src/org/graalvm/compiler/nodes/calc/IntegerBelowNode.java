@@ -112,11 +112,14 @@ public final class IntegerBelowNode extends IntegerLowerThanNode {
                  * @formatter:on
                  */
                 if (c == -1) {
+                    // veriopt: IntegerBelowNormailizeCompareFalseMirror: c |<| (a NC b) |-> false when c == -1
                     return LogicConstantNode.contradiction();
                 } else if (c == 0) {
                     LogicNode equal = normalizeNode.createEqualComparison(constantReflection, metaAccess, options, smallestCompareWidth, view);
+                    // veriopt: IntegerBelowNormailizeCompareNotEqual: c |<| (a NC b) |-> !(a == b) when c == 0
                     return LogicNegationNode.create(equal);
                 } else {
+                    // veriopt IntegerBelowNormailizeCompareLessThan : c |<| (a NC b) |-> a < b when c != -1 && c != 0
                     return normalizeNode.createLowerComparison(constantReflection, metaAccess, options, smallestCompareWidth, view);
                 }
             } else {
@@ -129,12 +132,15 @@ public final class IntegerBelowNode extends IntegerLowerThanNode {
                  * @formatter:on
                  */
                 if (c == 0) {
+                    // veriopt: IntegerBelowNormailizeCompareFalse: (a NC b) |<| c |-> false when c == 0
                     return LogicConstantNode.contradiction();
                 } else if (c == 1) {
+                    // veriopt: IntegerBelowNormailizeCompareEqual: (a NC b) |<| c |-> (a == b) when c == 1
                     return normalizeNode.createEqualComparison(constantReflection, metaAccess, options, smallestCompareWidth, view);
                 } else {
                     // a >= b -> !(a < b)
                     LogicNode compare = normalizeNode.createLowerComparison(constantReflection, metaAccess, options, smallestCompareWidth, view);
+                    // veriopt IntegerBelowNormailizeCompareNotLessThan : c |<| (a NC b) |-> a < b when c != -1 && c != 0
                     return LogicNegationNode.create(compare);
                 }
             }
@@ -154,6 +160,7 @@ public final class IntegerBelowNode extends IntegerLowerThanNode {
                 assert yStamp.getBits() == bits;
                 LogicNode logic = canonicalizeRangeFlip(forX, forY, bits, false, view);
                 if (logic != null) {
+                    // veriopt: IntegerBelowRangeFlip: x + MIN_VALUE |<| y + MIN_VALUE |-> x < y todo unsure of conditions
                     return logic;
                 }
                 if (xStamp.isPositive() && forY instanceof ConditionalNode && ((ConditionalNode) forY).condition() instanceof IntegerBelowNode) {

@@ -88,6 +88,7 @@ public class MulNode extends BinaryArithmeticNode<Mul> implements NarrowableArit
                 return improvement;
             }
             // if this fails we only swap
+            // veriopt: MulShiftConstantRight: ((ConstantExpr x) * y) |-> y * (ConstantExpr x) when ~ (is_ConstantExpr y)
             return new MulNode(forY, forX);
         }
 
@@ -116,6 +117,7 @@ public class MulNode extends BinaryArithmeticNode<Mul> implements NarrowableArit
                 // Canonicalize expressions like "(a * 2) * 4" => "(a * 8)"
                 ValueNode reassociated = reassociateMatchedValues(self != null ? self : (MulNode) new MulNode(forX, forY).maybeCommuteInputs(), ValueNode.isConstantPredicate(), forX, forY, view);
                 if (reassociated != self) {
+                    // veriopt-ref: reassociateMatchedValues
                     return reassociated;
                 }
             }
@@ -170,7 +172,7 @@ public class MulNode extends BinaryArithmeticNode<Mul> implements NarrowableArit
                         assert CodeUtil.log2(subValue) >= 1;
                         ValueNode left = new LeftShiftNode(forX, ConstantNode.forInt(shiftToRoundUpToPowerOf2));
                         ValueNode right = new LeftShiftNode(forX, ConstantNode.forInt(CodeUtil.log2(subValue)));
-                        // @formatter:off veriopt: MulUnnamed: x * const(2^j - 2^k) |-> x << const(j) - x << const(k)
+                        // @formatter:off veriopt: MulPower2SubPower2: x * const(2^j - 2^k) |-> x << const(j) - x << const(k)
                         return SubNode.create(left, right, view);
                     }
                 }

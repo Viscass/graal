@@ -164,7 +164,7 @@ public final class IntegerLessThanNode extends IntegerLowerThanNode {
             if (forX.getOptions() == null || GraalOptions.PreferUnsignedComparison.getValue(forX.getOptions())) {
                 if (forX.stamp(view) instanceof IntegerStamp && forY.stamp(view) instanceof IntegerStamp) {
                     if (IntegerStamp.sameSign((IntegerStamp) forX.stamp(view), (IntegerStamp) forY.stamp(view))) {
-                        // veriopt: todo unsure
+                        // veriopt: IntegerLessThanConvertToBelow: x < y |-> x |<| y where IntegerStamp.sameSign(x.stamp, y.stamp)
                         return new IntegerBelowNode(forX, forY);
                     }
                 }

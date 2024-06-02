@@ -80,11 +80,13 @@ public class SignedFloatingIntegerDivNode extends FloatingIntegerDivRemNode<Bina
                     return this;
                 }
             }
+            // veriopt: SignedFloatingIntegerDivConstFold: SignedFloatingIntegerDivNode((ConstantExpr x), (ConstantExpr y)) |-> ConstantExpr (x / y)
             return ConstantNode.forIntegerStamp(stamp, forX.asJavaConstant().asLong() / yConst);
         } else if (forY.isConstant()) {
             long c = forY.asJavaConstant().asLong();
             ValueNode v = SignedDivNode.canonical(forX, c, view);
             if (v != null) {
+                // veriopt: SignedFloatingIntegerDivByConstant: SignedFloatingIntegerDivNode(x, (ConstantExpr y)) |-> SignedDivNode(x, y) todo unsure, perform all optimisations of SignedDivNode?
                 return v;
             }
         }

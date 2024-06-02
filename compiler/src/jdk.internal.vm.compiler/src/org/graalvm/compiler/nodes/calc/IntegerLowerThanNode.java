@@ -207,7 +207,8 @@ public abstract class IntegerLowerThanNode extends CompareNode {
 
         protected LogicNode findSynonym(ValueNode forX, ValueNode forY, NodeView view) {
             if (GraphUtil.unproxify(forX) == GraphUtil.unproxify(forY)) {
-                // veriopt: IntegerLowerThanSame: x < x |-> false
+                // veriopt: IntegerLessThanSame: x < x |-> false
+                // veriopt: IntegerBelowSame: x |<| x |-> false
                 return LogicConstantNode.contradiction();
             }
             Stamp xStampGeneric = forX.stamp(view);
@@ -555,7 +556,6 @@ public abstract class IntegerLowerThanNode extends CompareNode {
                     // veriopt: IntegerLessThanRangeFlip: x + MIN_VALUE < y + MIN_VALUE |-> x |<| y todo unsure of conditions
                     return new IntegerBelowNode(left, right);
                 } else {
-                    // veriopt: IntegerBelowRangeFlip: x + MIN_VALUE |<| y + MIN_VALUE |-> x < y todo unsure of conditions
                     return new IntegerLessThanNode(left, right);
                 }
             }

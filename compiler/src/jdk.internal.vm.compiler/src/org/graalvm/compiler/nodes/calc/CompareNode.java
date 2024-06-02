@@ -299,11 +299,14 @@ public abstract class CompareNode extends BinaryOpLogicNode implements Canonical
                 TriState falseResult = cond.foldCondition(compareStamp, falseConstant, constant, constantReflection, unorderedIsTrue);
 
                 if (trueResult.isKnown() && trueResult.equals(falseResult)) {
+                    // veriopt: CompareConstantEqualConstantBranchConditional: Compare(c, (cond ? t : f)) |-> R where eval(c op t) == eval(c op f) and R = eval(c op t)
                     return LogicConstantNode.forBoolean(trueResult.toBoolean());
                 } else {
                     if (trueResult.isTrue() && falseResult.isFalse()) {
+                        // veriopt: CompareEliminateCompareConditional: Compare(c, (cond ? t : f)) |-> cond where eval(c op t) == true and eval(c op f) == false
                         return conditionalNode.condition();
                     } else if (trueResult.isFalse() && falseResult.isTrue()) {
+                        // veriopt: CompareEliminateCompareNegateConditional: Compare(c, (cond ? t : f)) |-> !cond where eval(c op t) == false and eval(c op f) == true
                         return LogicNegationNode.create(conditionalNode.condition());
 
                     }
